@@ -1,0 +1,26 @@
+{
+  "name": "Today’s Memo",
+  "description": "Quickly jot down daily thoughts, reminders, or to-dos in your browser, save today’s memo, and review your memo history anytime-all with a simple and private Chrome extension.",
+  "version": "1.0.0",
+  "manifest_version": 3,
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_title": "Today’s Memo",
+    "default_popup": "index.html"
+  },
+  "background": {
+    "service_worker": "build/background.js"
+  },
+  "permissions": ["storage", "activeTab", "scripting"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["build/content.js"]
+    }
+  ]
+}
