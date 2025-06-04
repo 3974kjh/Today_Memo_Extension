@@ -1,6 +1,5 @@
 <script>
   import { onMount, createEventDispatcher, tick, onDestroy } from 'svelte';
-  import { slide } from 'svelte/transition';
   
   // Utility imports
   import { parseMarkdown } from './utils/markdownUtils.js';
@@ -33,6 +32,7 @@
   export let isLeftPosition = false;
   export let isResizeJustCompleted = false; // 리사이즈 완료 직후 플래그 (외부 접근용)
   export let isResizing = false; // 리사이즈 중 플래그 (외부 접근용)
+  export let skipPositionAdjustment = false; // 위치 조정 스킵 플래그 (content.js에서 설정)
 
   const dispatch = createEventDispatcher();
 
@@ -232,20 +232,28 @@
    * @param {number} newHeight - 새로운 높이
    * @param {HTMLElement} targetElement - 대상 요소
    * @param {boolean} isPreviewMode - 프리뷰 모드 여부
+   * @param {number} maxWidth - 최대 너비
+   * @param {number} maxHeight - 최대 높이
    */
-  const updateResizeSize = (newWidth, newHeight, targetElement, isPreviewMode) => {
+  const updateResizeSize = (newWidth, newHeight, targetElement, isPreviewMode, maxWidth, maxHeight) => {
     // 크기 적용
     textareaWidth = `${newWidth}px`;
     textareaHeight = `${newHeight}px`;
     
-    // 편집모드에서는 실시간으로 완전한 스타일 적용
+    // 편집모드와 프리뷰모드 모두 동일한 경계 제한 적용
     if (!isPreviewMode && targetElement.tagName === 'TEXTAREA') {
-      console.log('Updating textarea size during resize:', textareaWidth, textareaHeight);
-      applySizeToElement(targetElement, newWidth, newHeight, true);
+      console.log('Updating textarea size during resize:', textareaWidth, textareaHeight, 'max:', maxWidth, 'x', maxHeight);
+      applySizeToElement(targetElement, newWidth, newHeight, true, maxWidth, maxHeight);
     } else {
-      // 프리뷰 모드는 기본 크기 적용
-      applySizeToElement(targetElement, newWidth, newHeight, false);
+      // 프리뷰 모드도 경계 제한 적용
+      console.log('Updating preview div size during resize:', textareaWidth, textareaHeight, 'max:', maxWidth, 'x', maxHeight);
+      applySizeToElement(targetElement, newWidth, newHeight, false, maxWidth, maxHeight);
     }
+    
+    // 리사이즈 중에도 위치 재조정 (편집모드와 프리뷰모드 모두)
+    setTimeout(() => {
+      adjustModalPosition(newWidth, newHeight);
+    }, 10); // 즉시 위치 조정
   };
 
   /**
@@ -392,6 +400,27 @@
   })
 
   /**
+   * 모달 위치를 재조정합니다 (content.js의 함수 호출)
+   * @param {number} width - 현재 또는 예상 너비 (옵션)
+   * @param {number} height - 현재 또는 예상 높이 (옵션)
+   */
+  const adjustModalPosition = (width = null, height = null) => {
+    // 크기가 제공되지 않은 경우 현재 크기 사용
+    if (!width || !height) {
+      const currentWidth = parseInt(textareaWidth.replace('px', ''));
+      const currentHeight = parseInt(textareaHeight.replace('px', ''));
+      width = width || currentWidth;
+      height = height || currentHeight;
+    }
+    
+    // content.js의 calcPositionForPopup 함수 호출 (크기 정보 포함)
+    if (typeof window !== 'undefined' && window.calcPositionForPopup) {
+      console.log('Adjusting modal position with size:', width, 'x', height);
+      window.calcPositionForPopup(width, height);
+    }
+  };
+
+  /**
    * 외부에서 호출 가능한 저장된 크기 적용 함수
    * @param {number} width - 적용할 너비
    * @param {number} height - 적용할 높이
@@ -430,12 +459,22 @@
       applySizeToElement(previewDiv, width, height, false);
     }
 
+    // 크기 적용 후 모달 위치 재조정 (오른쪽 경계를 벗어나지 않도록)
+    if (!skipPositionAdjustment) {
+      setTimeout(() => {
+        adjustModalPosition(width, height);
+        console.log('Modal position adjusted after size application');
+      }, 100); // 크기 적용이 완료된 후 위치 조정
+    } else {
+      console.log('Position adjustment skipped due to skipPositionAdjustment flag');
+    }
+
     console.log('Successfully applied saved size:', width, 'x', height);
   };
 
   // 패널이 열릴 때 저장된 크기 적용을 위한 reactive statement
-  $: if (isOpenPanelFlag && typeof window !== 'undefined') {
-    // 패널이 열렸을 때 저장된 크기 적용
+  $: if (isOpenPanelFlag && typeof window !== 'undefined' && !skipPositionAdjustment) {
+    // 패널이 열렸을 때 저장된 크기 적용 (content.js에서 처리하지 않는 경우에만)
     setTimeout(async () => {
       const savedSize = await getMemoModalSize();
       if (savedSize && savedSize.width && savedSize.height) {
@@ -564,7 +603,6 @@
           margin-top: 8px;
           font-size: 14px;
         "
-        transition:slide
       >
         <h4 style="font-weight: bold; margin-bottom: 8px; color: #1e40af;">📝 마크다운 사용법</h4>
         <div style="color: #374151; line-height: 1.4;">
@@ -795,7 +833,7 @@
           style="
             color: #7dd3fc;
           "
-          transition:slide>{successMsg}</p>
+          >{successMsg}</p>
       {/if}
     </div>
   {/if}

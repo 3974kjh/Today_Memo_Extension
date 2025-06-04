@@ -131,17 +131,21 @@ export class ResizeManager {
     const absoluteMinWidth = 200;
     const absoluteMinHeight = 150;
     
-    // 최대 크기 계산
+    // 실시간으로 현재 모달 위치를 기준으로 최대 크기 계산
     const { maxWidth, maxHeight } = getMaxDimensions();
     
-    // 크기 제한 적용
-    newWidth = Math.max(absoluteMinWidth, Math.min(newWidth, maxWidth));
-    newHeight = Math.max(absoluteMinHeight, Math.min(newHeight, maxHeight));
+    // 추가 여유공간을 고려한 실제 최대 크기 (브라우저 경계를 절대 넘지 않도록)
+    const safeMaxWidth = Math.max(absoluteMinWidth, maxWidth - 10); // 10px 여유공간
+    const safeMaxHeight = Math.max(absoluteMinHeight, maxHeight - 10); // 10px 여유공간
+    
+    // 크기 제한 적용 (더 엄격한 경계 체크)
+    newWidth = Math.max(absoluteMinWidth, Math.min(newWidth, safeMaxWidth));
+    newHeight = Math.max(absoluteMinHeight, Math.min(newHeight, safeMaxHeight));
     
     // 크기가 유효한 경우에만 적용
     if (newWidth > 0 && newHeight > 0) {
-      // 콜백을 통해 크기 업데이트
-      updateSizeCallback(newWidth, newHeight, targetElement, isPreviewMode);
+      // 콜백을 통해 크기 업데이트 (실시간 경계 정보 전달)
+      updateSizeCallback(newWidth, newHeight, targetElement, isPreviewMode, safeMaxWidth, safeMaxHeight);
       
       // 리사이즈할 때마다 크기 정보 자동 저장
       saveSizeCallback(newWidth, newHeight);
@@ -161,6 +165,11 @@ export class ResizeManager {
       event.stopPropagation();
       event.stopImmediatePropagation();
     }
+    
+    // 최종 크기 정보 캡처 (위치 조정용)
+    const targetElement = document.getElementById('markdown-preview-div') || document.getElementById('alive-memo-textarea');
+    const finalWidth = targetElement ? targetElement.offsetWidth : null;
+    const finalHeight = targetElement ? targetElement.offsetHeight : null;
     
     this.isResizing = false;
     this.resizeDirection = '';
@@ -184,6 +193,14 @@ export class ResizeManager {
     document.body.style.userSelect = '';
     document.body.classList.remove('resizing');
     
+    // 리사이즈 완료 후 모달 위치 재조정 (최종 크기 정보 포함)
+    setTimeout(() => {
+      if (typeof window !== 'undefined' && window.calcPositionForPopup && finalWidth && finalHeight) {
+        console.log('Adjusting modal position after resize completion with final size:', finalWidth, 'x', finalHeight);
+        window.calcPositionForPopup(finalWidth, finalHeight);
+      }
+    }, 50); // 리사이즈 완료 후 위치 조정
+    
     // 300ms 후 클릭 차단 해제
     setTimeout(() => {
       if (preventClick) {
@@ -201,17 +218,24 @@ export class ResizeManager {
  * @param {number} width - 너비
  * @param {number} height - 높이
  * @param {boolean} isTextarea - textarea 요소 여부
+ * @param {number} maxWidth - 최대 너비 (옵션)
+ * @param {number} maxHeight - 최대 높이 (옵션)
  */
-export const applySizeToElement = (element, width, height, isTextarea = false) => {
+export const applySizeToElement = (element, width, height, isTextarea = false, maxWidth = null, maxHeight = null) => {
   if (!element) return;
   
   const widthPx = `${width}px`;
   const heightPx = `${height}px`;
   
+  // 최대 크기가 제공되지 않은 경우 동적으로 계산
+  if (maxWidth === null || maxHeight === null) {
+    const dimensions = getMaxDimensions();
+    maxWidth = maxWidth || dimensions.maxWidth;
+    maxHeight = maxHeight || dimensions.maxHeight;
+  }
+  
   if (isTextarea) {
     // textarea의 경우 완전한 스타일 적용
-    const { maxWidth, maxHeight } = getMaxDimensions();
-    
     element.removeAttribute('style');
     
     const newStyle = `
@@ -225,8 +249,8 @@ export const applySizeToElement = (element, width, height, isTextarea = false) =
       box-sizing: border-box !important;
       width: ${widthPx} !important;
       height: ${heightPx} !important;
-      min-width: ${widthPx} !important;
-      min-height: ${heightPx} !important;
+      min-width: 200px !important;
+      min-height: 150px !important;
       max-width: ${maxWidth}px !important;
       max-height: ${maxHeight}px !important;
     `;
@@ -242,8 +266,12 @@ export const applySizeToElement = (element, width, height, isTextarea = false) =
     element.setAttribute('cols', cols.toString());
     element.setAttribute('rows', rows.toString());
   } else {
-    // 일반 div의 경우 간단한 크기 적용
+    // 일반 div의 경우 크기 적용 (max 제한도 포함)
     element.style.width = widthPx;
     element.style.height = heightPx;
+    element.style.maxWidth = `${maxWidth}px`;
+    element.style.maxHeight = `${maxHeight}px`;
+    element.style.minWidth = '200px';
+    element.style.minHeight = '150px';
   }
 }; 

@@ -133,6 +133,46 @@ const fixStyle = () => {
 }
 
 /**
+ * 초기 모달 위치를 설정합니다 (modalPosition 기반)
+ * @param {string} position - 위치 코드 ('TL', 'TR', 'BL', 'BR')
+ */
+const setInitialModalPosition = (position) => {
+  const rect = container.getBoundingClientRect();
+  const viewportWidth = document.documentElement.clientWidth;
+  const viewportHeight = document.documentElement.clientHeight;
+  const safeMargin = 10;
+
+  // 위치 코드에 따른 좌표 설정
+  if (position === 'TR') {
+    // 위 + 오른쪽
+    top = safeMargin;
+    left = Math.max(safeMargin, viewportWidth - rect.width - safeMargin);
+  } else if (position === 'BR') {
+    // 아래 + 오른쪽
+    top = Math.max(safeMargin, viewportHeight - rect.height - safeMargin);
+    left = Math.max(safeMargin, viewportWidth - rect.width - safeMargin);
+  } else if (position === 'BL') {
+    // 아래 + 왼쪽
+    top = Math.max(safeMargin, viewportHeight - rect.height - safeMargin);
+    left = safeMargin;
+  } else {
+    // 위 + 왼쪽 (기본값)
+    top = safeMargin;
+    left = safeMargin;
+  }
+
+  // 최종 경계 체크
+  left = Math.max(safeMargin, Math.min(left, viewportWidth - rect.width - safeMargin));
+  top = Math.max(safeMargin, Math.min(top, viewportHeight - rect.height - safeMargin));
+
+  // 계산된 위치를 DOM에 적용
+  container.style.top = `${top}px`;
+  container.style.left = `${left}px`;
+  
+  console.log('Initial modal position set:', position, '→', left, top);
+};
+
+/**
  * 지정된 위치에 따라 모달의 위치를 설정합니다.
  * @param {string} position - 위치 코드 ('TL', 'TR', 'BL', 'BR')
  */
@@ -147,27 +187,8 @@ const applyMemoPosition = (position) => {
   top = top < 0 ? 0 : top;
   top = top < document.documentElement.clientHeight - rect.height ? top : document.documentElement.clientHeight - rect.height;
 
-  // 위치 코드에 따른 좌표 설정
-  if (position === 'TR') {
-    // 위 + 오른쪽
-    top = 10;
-    left = document.documentElement.clientWidth - rect.width;
-  } else if (position === 'BR') {
-    // 아래 + 오른쪽
-    top = document.documentElement.clientHeight - rect.height - 10;
-    left = document.documentElement.clientWidth - rect.width;
-  } else if (position === 'BL') {
-    // 아래 + 왼쪽
-    top = document.documentElement.clientHeight - rect.height - 10;
-    left = 0;
-  } else {
-    // 위 + 왼쪽 (기본값)
-    top = 10;
-    left = 0;
-  }
-
-  // 계산된 위치 적용
-  calcPositionForPopup();
+  // 초기 위치 설정 (position 기반)
+  setInitialModalPosition(position);
 }
 
 /**
@@ -202,8 +223,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   // 위치 변경 메시지 처리
   if (msg.type === "positionChanged") {
-    changePosition(msg.text ?? '', msg.position);
-    sendResponse({ result: 'ok' }); // 응답 보내기
+    changePosition(msg.text ?? '', msg.position).then(() => {
+      sendResponse({ result: 'ok' }); // 응답 보내기
+    }).catch((error) => {
+      console.error('Error in changePosition:', error);
+      sendResponse({ result: 'error' }); // 에러 응답
+    });
     return true; // 비동기 응답 시 필요
   }
 });
@@ -251,7 +276,7 @@ const showMemo = (text, position) => {
  * @param {string} text - 표시할 메모 텍스트
  * @param {string} position - 새로운 모달 위치
  */
-const changePosition = (text, position) => {
+const changePosition = async (text, position) => {
   // 브라우저에 띄운 메모 있는지 확인
   if (!!aliveMemoDocument) {
     // 이미 있으면 데이터 업데이트하고 패널 열기
@@ -279,9 +304,29 @@ const changePosition = (text, position) => {
     })
   }
 
-  // 위치 적용 및 열린 모달 스타일 설정
+  // 초기 위치 설정
   applyMemoPosition(position);
-  openModalStyle();
+  
+  // 저장된 크기 불러와서 적용
+  chrome.runtime.sendMessage({ type: "getMemoSize" }, async (sizeResponse) => {
+    if (chrome.runtime.lastError) {
+      console.warn('Failed to get saved size for position change:', chrome.runtime.lastError);
+      openModalStyle();
+      return;
+    }
+    
+    const savedSize = sizeResponse?.size;
+    if (savedSize && savedSize.width && savedSize.height) {
+      console.log('Position changed, applying saved size:', savedSize.width, 'x', savedSize.height);
+      
+      // 통합된 크기 및 위치 적용
+      await applySavedSizeAndPosition(savedSize);
+      openModalStyle();
+    } else {
+      console.log('No saved size found for position change');
+      openModalStyle();
+    }
+  });
 }
 
 /**
@@ -298,6 +343,28 @@ const onMouseUp = (event) => {
   // 드래깅 상태 해제
   isDragging = false;
   if (!!aliveMemoDocument) aliveMemoDocument.isDragging = false;
+};
+
+/**
+ * 드래그 중에 사용할 기본 위치 계산 (동기적)
+ */
+const calcBasicPosition = () => {
+  if (!container) return;
+
+  // 기본 경계 체크 (기존 로직)
+  const rect = container.getBoundingClientRect();
+
+  // 좌우 경계 체크 및 조정
+  left = left < 0 ? 0 : left;
+  left = left < document.documentElement.clientWidth - rect.width ? left : document.documentElement.clientWidth - rect.width;
+
+  // 상하 경계 체크 및 조정
+  top = top < 0 ? 0 : top;
+  top = top < document.documentElement.clientHeight - rect.height ? top : document.documentElement.clientHeight - rect.height;
+
+  // 계산된 위치를 DOM에 적용
+  container.style.top = `${top}px`;
+  container.style.left = `${left}px`;
 };
 
 /**
@@ -325,7 +392,7 @@ const onMouseMove = (event) => {
   top += event.movementY; // y축 이동량 적용
 
   moveStyle(); // 이동 중 스타일 적용
-  calcPositionForPopup(); // 위치 재계산 및 적용
+  calcBasicPosition(); // 기본 위치 재계산 및 적용 (동기적)
 }
 
 /**
@@ -471,28 +538,26 @@ const setupEventListeners = () => {
           console.log('Panel opening, applying saved size...');
           
           // 저장된 크기 불러오기
-          chrome.runtime.sendMessage({ type: "getMemoSize" }, (sizeResponse) => {
+          chrome.runtime.sendMessage({ type: "getMemoSize" }, async (sizeResponse) => {
             if (chrome.runtime.lastError) {
               console.warn('Failed to get saved size:', chrome.runtime.lastError);
-              calcPositionForPopup();
+              calcBasicPosition();
               openModalStyle();
               return;
             }
             
             const savedSize = sizeResponse?.size;
             if (savedSize && savedSize.width && savedSize.height) {
-              console.log('Applying saved size to opened panel:', savedSize.width, 'x', savedSize.height);
+              console.log('Panel opening with saved size:', savedSize.width, 'x', savedSize.height);
               
-              // AliveMemo 컴포넌트에 저장된 크기 적용 요청
-              if (aliveMemoDocument && aliveMemoDocument.applySavedSize) {
-                aliveMemoDocument.applySavedSize(savedSize.width, savedSize.height);
-              }
+              // 통합된 크기 및 위치 적용
+              await applySavedSizeAndPosition(savedSize);
+              openModalStyle();
             } else {
               console.log('No saved size found for opened panel');
+              calcBasicPosition();
+              openModalStyle();
             }
-            
-            calcPositionForPopup();
-            openModalStyle();
           });
         } else {
           fixStyle();
@@ -534,10 +599,99 @@ const setupEventListeners = () => {
 };
 
 /**
- * 모달의 위치를 계산하고 화면 경계를 벗어나지 않도록 조정합니다.
+ * 저장된 크기를 고려하여 스마트한 모달 위치를 계산합니다.
+ * @param {number} expectedWidth - 예상 너비 (옵션)
+ * @param {number} expectedHeight - 예상 높이 (옵션)
  */
-const calcPositionForPopup = () => {
+const calcSmartModalPosition = async (expectedWidth = null, expectedHeight = null) => {
+  if (!container || !aliveMemoDocument) return;
+
   // 현재 컨테이너의 크기 정보 가져오기
+  const rect = container.getBoundingClientRect();
+  
+  // 예상 크기가 제공되지 않은 경우 현재 크기 또는 저장된 크기 사용
+  let targetWidth = expectedWidth || rect.width;
+  let targetHeight = expectedHeight || rect.height;
+  
+  // 저장된 크기 정보가 있으면 사용
+  if (!expectedWidth || !expectedHeight) {
+    try {
+      const savedSizeResponse = await new Promise((resolve) => {
+        chrome.runtime.sendMessage({ type: "getMemoSize" }, resolve);
+      });
+      
+      if (savedSizeResponse?.size) {
+        targetWidth = expectedWidth || savedSizeResponse.size.width || targetWidth;
+        targetHeight = expectedHeight || savedSizeResponse.size.height || targetHeight;
+        console.log('Using saved size for position calculation:', targetWidth, 'x', targetHeight);
+      }
+    } catch (error) {
+      console.warn('Failed to get saved size for position calculation:', error);
+    }
+  }
+
+  const viewportWidth = document.documentElement.clientWidth;
+  const viewportHeight = document.documentElement.clientHeight;
+  const safeMargin = 10; // 안전 여백
+  
+  // 현재 위치를 기준으로 시작 (그 자리에서 확장)
+  let newLeft = rect.left;
+  let newTop = rect.top;
+  
+  console.log('Current position:', newLeft, newTop, 'Target size:', targetWidth, 'x', targetHeight);
+
+  // 오른쪽 경계 체크 및 조정
+  const rightOverflow = (newLeft + targetWidth + safeMargin) - viewportWidth;
+  if (rightOverflow > 0) {
+    newLeft = Math.max(safeMargin, newLeft - rightOverflow);
+    console.log('Adjusted left for right overflow:', newLeft);
+  }
+
+  // 하단 경계 체크 및 조정
+  const bottomOverflow = (newTop + targetHeight + safeMargin) - viewportHeight;
+  if (bottomOverflow > 0) {
+    newTop = Math.max(safeMargin, newTop - bottomOverflow);
+    console.log('Adjusted top for bottom overflow:', newTop);
+  }
+
+  // 왼쪽 경계 체크 (혹시 위에서 조정하면서 왼쪽으로 너무 밀린 경우)
+  if (newLeft < safeMargin) {
+    newLeft = safeMargin;
+    console.log('Adjusted left for left boundary:', newLeft);
+  }
+
+  // 상단 경계 체크 (혹시 위에서 조정하면서 위로 너무 밀린 경우)
+  if (newTop < safeMargin) {
+    newTop = safeMargin;
+    console.log('Adjusted top for top boundary:', newTop);
+  }
+
+  // 최종 위치 업데이트
+  left = newLeft;
+  top = newTop;
+
+  // 계산된 위치를 DOM에 적용
+  container.style.top = `${top}px`;
+  container.style.left = `${left}px`;
+  
+  console.log('Smart position applied (in-place expansion):', left, top, 'for size:', targetWidth, 'x', targetHeight);
+};
+
+/**
+ * 모달의 위치를 계산하고 화면 경계를 벗어나지 않도록 조정합니다.
+ * @param {number} expectedWidth - 예상 너비 (옵션)
+ * @param {number} expectedHeight - 예상 높이 (옵션)
+ */
+const calcPositionForPopup = async (expectedWidth = null, expectedHeight = null) => {
+  if (!container) return;
+
+  // 크기가 제공된 경우 스마트 계산 사용 (리사이즈/확장 시)
+  if (expectedWidth && expectedHeight) {
+    await calcSmartModalPosition(expectedWidth, expectedHeight);
+    return;
+  }
+
+  // 크기가 제공되지 않은 경우 기본 경계 체크만 수행 (드래그 등)
   const rect = container.getBoundingClientRect();
 
   // 좌우 경계 체크 및 조정
@@ -552,6 +706,9 @@ const calcPositionForPopup = () => {
   container.style.top = `${top}px`;
   container.style.left = `${left}px`;
 };
+
+// 전역으로 노출하여 AliveMemo.svelte에서 호출 가능하도록 함
+window.calcPositionForPopup = calcPositionForPopup;
 
 /**
  * AliveMemo 컴포넌트에서 모달 위치 변경 시 호출되는 함수
@@ -577,7 +734,7 @@ const updatePosition = () => {
   top = rect.top;
   left = rect.left;
   
-  calcPositionForPopup();
+  calcBasicPosition();
 };
 
 /**
@@ -629,3 +786,31 @@ if (chrome.runtime && chrome.runtime.id) {
     }
   }, 500);
 }
+
+/**
+ * 저장된 크기와 위치를 통합적으로 적용합니다.
+ * @param {Object} savedSize - 저장된 크기 정보
+ */
+const applySavedSizeAndPosition = async (savedSize) => {
+  if (!savedSize || !savedSize.width || !savedSize.height) {
+    console.log('No saved size to apply');
+    calcBasicPosition();
+    return;
+  }
+
+  console.log('Applying saved size and calculating position:', savedSize.width, 'x', savedSize.height);
+  
+  // 1. AliveMemo 컴포넌트에 크기 적용 요청 (위치 조정 없이)
+  if (aliveMemoDocument && aliveMemoDocument.applySavedSize) {
+    // applySavedSize 내부의 위치 조정을 일시적으로 비활성화하기 위해 플래그 설정
+    aliveMemoDocument.skipPositionAdjustment = true;
+    await aliveMemoDocument.applySavedSize(savedSize.width, savedSize.height);
+    
+    // 크기 적용 완료 후 위치 조정 실행
+    setTimeout(async () => {
+      await calcPositionForPopup(savedSize.width, savedSize.height);
+      aliveMemoDocument.skipPositionAdjustment = false;
+      console.log('Unified size and position application completed');
+    }, 50); // 크기 적용이 완전히 완료된 후 위치 조정
+  }
+};
