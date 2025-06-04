@@ -25,6 +25,8 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.6",
+    "dompurify": "^3.2.6",
+    "marked": "^15.0.12",
     "sirv-cli": "^2.0.0",
     "svelte-chrome-storage": "^0.1.5"
   }

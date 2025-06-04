@@ -121,4 +121,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
   }
+
+  // 메모 모달 크기 정보 저장
+  if (request.type === "saveMemoSize") {
+    chrome.storage.local.set({ 'memoSize': request.size }, () => {
+      sendResponse({ status: "ok" });
+    });
+    return true;
+  }
+
+  // 메모 모달 크기 정보 불러오기
+  if (request.type === "getMemoSize") {
+    chrome.storage.local.get('memoSize', (result) => {
+      sendResponse({ size: result.memoSize });
+    });
+    return true;
+  }
 });
