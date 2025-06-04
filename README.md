@@ -176,9 +176,11 @@ npm run dev
 - 마크다운 처리를 위한 Marked.js
 - 보안 중심의 HTML 새니타이제이션을 위한 DOMPurify
 
-## 📞 지원
+## 📞 문의 및 지원
 
-문제가 발생하거나 기능 요청이 있으시면, GitHub에서 [이슈를 열어주세요](https://github.com/your-username/today-memo-extension/issues).
+- **이슈 리포트**: [GitHub Issues](https://github.com/username/finance_website/issues)
+- **기능 요청**: [GitHub Discussions](https://github.com/username/finance_website/discussions)
+- **이메일**: 42.4.jukim@gmail.com
 
 ---
 
