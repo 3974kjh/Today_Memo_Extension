@@ -711,56 +711,6 @@ const calcPositionForPopup = async (expectedWidth = null, expectedHeight = null)
 window.calcPositionForPopup = calcPositionForPopup;
 
 /**
- * AliveMemo 컴포넌트에서 모달 위치 변경 시 호출되는 함수
- * @param {number} newLeft - 새로운 left 위치
- * @param {number} newTop - 새로운 top 위치
- */
-window.updateModalPosition = (newLeft, newTop) => {
-  left = newLeft;
-  top = newTop;
-};
-
-/**
- * 리사이즈 중이 아닐 때만 위치를 업데이트합니다.
- */
-const updatePosition = () => {
-  // 리사이즈 중이면 위치 업데이트 건너뛰기
-  if (aliveMemoDocument && aliveMemoDocument.isResizing) {
-    return;
-  }
-  
-  // 현재 DOM에서 실제 위치 가져오기
-  const rect = container.getBoundingClientRect();
-  top = rect.top;
-  left = rect.left;
-  
-  calcBasicPosition();
-};
-
-/**
- * 현재 위치를 기준으로 왼쪽/오른쪽 위치를 결정하고 적용합니다.
- * @returns {boolean} 왼쪽 위치이면 true, 오른쪽 위치이면 false
- */
-const getLeftRightPosition = () => {
-  const modalMinWidth = 165;
-  const screenCenter = document.documentElement.clientWidth / 2;
-  
-  // 현재 위치가 화면 중앙보다 왼쪽에 있는지 확인
-  const isLeft = left < screenCenter;
-  
-  // 가장자리로 이동
-  left = isLeft ? 0 : document.documentElement.clientWidth - modalMinWidth;
-  
-  // 경계 확인
-  left = Math.max(0, Math.min(left, document.documentElement.clientWidth - modalMinWidth));
-  
-  // 위치 적용
-  container.style.left = `${left}px`;
-  
-  return isLeft; 
-}
-
-/**
  * DOM 로드 상태를 확인하고 초기화를 진행합니다.
  */
 const waitForDOMAndInitialize = () => {
