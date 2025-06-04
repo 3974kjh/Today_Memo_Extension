@@ -178,8 +178,6 @@ npm run dev
 
 ## 📞 문의 및 지원
 
-- **이슈 리포트**: [GitHub Issues](https://github.com/username/finance_website/issues)
-- **기능 요청**: [GitHub Discussions](https://github.com/username/finance_website/discussions)
 - **이메일**: 42.4.jukim@gmail.com
 
 ---
