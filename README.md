@@ -1,107 +1,185 @@
-# This repo is no longer maintained. Consider using `npm init vite` and selecting the `svelte` option or — if you want a full-fledged app framework — use [SvelteKit](https://kit.svelte.dev), the official application framework for Svelte.
+# Today's Memo 크롬 익스텐션
 
----
+마크다운 지원, 드래그 앤 드롭 기능, 지속적 메모 관리를 제공하는 강력하고 직관적인 일일 노트 작성용 크롬 익스텐션입니다.
 
-# svelte app
+## 📝 개요
 
-This is a project template for [Svelte](https://svelte.dev) apps. It lives at https://github.com/sveltejs/template.
+Today's Memo는 브라우저에서 직접 일상의 생각, 알림, 할 일을 빠르게 기록할 수 있는 크롬 익스텐션입니다. 플로팅 메모 모달을 통해 어떤 웹사이트를 탐색하는 중에도 언제든지 메모에 액세스할 수 있습니다. 이 익스텐션은 마크다운 포맷팅을 지원하며, 크기 조절 가능한 모달, 위치 기억, 포괄적인 메모 히스토리와 같은 고급 기능을 통해 원활한 노트 작성 경험을 제공합니다.
 
-To create a new project based on this template using [degit](https://github.com/Rich-Harris/degit):
+## ✨ 주요 기능
 
-```bash
-npx degit sveltejs/template svelte-app
-cd svelte-app
+### 🎯 핵심 기능
+- **플로팅 메모 모달**: 모든 웹페이지에 나타나는 드래그 가능하고 크기 조절 가능한 메모 창
+- **마크다운 지원**: 라이브 프리뷰 모드가 포함된 완전한 마크다운 렌더링
+- **지속적 저장**: Chrome 로컬 스토리지를 통한 자동 저장
+- **위치 기억**: 세션 간 모달 위치와 크기 기억
+- **히스토리 관리**: 날짜별로 이전 메모들을 조회하고 관리
+
+### 🎨 사용자 인터페이스
+- **깔끔한 디자인**: 직관적인 컨트롤이 포함된 현대적이고 미니멀한 인터페이스
+- **듀얼 모드**: 편집 모드와 프리뷰 모드 간 원활한 전환
+- **스마트 포지셀링**: 4개 모서리 위치 옵션 (좌상단, 우상단, 좌하단, 우하단)
+- **반응형 레이아웃**: 다양한 화면 크기와 브라우저 창에 적응
+
+### 🔧 고급 기능
+- **3방향 리사이즈**: 모달을 가로, 세로, 대각선으로 크기 조절
+- **자동 저장**: 타이핑 중 디바운스된 자동 저장 (1초 지연)
+- **클립보드에 복사**: 메모 내용을 원클릭으로 복사
+- **마크다운 도움말**: 내장된 마크다운 문법 가이드
+- **가장자리 스냅**: 사용하지 않을 때 화면 가장자리에 자동 스냅
+
+## 🏗️ 기술 아키텍처
+
+### 사용 기술
+- **프론트엔드 프레임워크**: Svelte 3.55.0
+- **빌드 도구**: 커스텀 구성의 Rollup
+- **스타일링**: Tailwind CSS 4.1.6
+- **마크다운 처리**: Marked.js 15.0.12 + DOMPurify 3.2.6
+- **Chrome API**: Storage, ActiveTab, Scripting 권한
+
+### 프로젝트 구조
+```
+src/
+├── AliveMemo.svelte         # 메인 메모 모달 컴포넌트
+├── App.svelte               # 팝업 인터페이스 컴포넌트
+├── background.js            # Chrome 익스텐션 백그라운드 스크립트
+├── content.js               # 웹페이지 상호작용을 위한 콘텐츠 스크립트
+├── main.js                  # 팝업 진입점
+└── utils/                   # 유틸리티 모듈
+    ├── markdownUtils.js     # 마크다운 파싱 및 스타일링
+    ├── storageUtils.js      # Chrome 스토리지 작업
+    ├── commonUtils.js       # 공통 헬퍼 함수
+    ├── resizeUtils.js       # 리사이즈 기능 관리
+    └── uiUtils.js           # UI 상호작용 유틸리티
 ```
 
-*Note that you will need to have [Node.js](https://nodejs.org) installed.*
+### 설계 원칙
+- **높은 응집도**: 목적별로 관련 함수들을 전용 유틸리티 모듈에 그룹화
+- **낮은 결합도**: 명확한 인터페이스를 가진 독립적인 모듈들
+- **코드 재사용성**: 컴포넌트 간 공유 유틸리티
+- **유지보수성**: 포괄적인 JSDoc 문서화와 체계적인 구조
 
+## 🚀 설치
 
-## Get started
+### 개발 환경 설정
 
-Install the dependencies...
+1. **저장소 복제**
+   ```bash
+   git clone https://github.com/your-username/today-memo-extension.git
+   cd today-memo-extension
+   ```
 
+2. **의존성 설치**
+   ```bash
+   npm install
+   ```
+
+3. **익스텐션 빌드**
+   ```bash
+   npm run build
+   ```
+
+4. **Chrome에 로드**
+   - Chrome을 열고 `chrome://extensions/`로 이동
+   - 우상단의 "개발자 모드" 활성화
+   - "압축해제된 확장 프로그램을 로드합니다" 클릭 후 `dist` 폴더 선택
+
+### 프로덕션 빌드
 ```bash
-cd svelte-app
-npm install
+npm run build
 ```
 
-...then start [Rollup](https://rollupjs.org):
-
+### 개발 모드
 ```bash
 npm run dev
 ```
 
-Navigate to [localhost:8080](http://localhost:8080). You should see your app running. Edit a component file in `src`, save it, and reload the page to see your changes.
+## 📖 사용 가이드
 
-By default, the server will only respond to requests from localhost. To allow connections from other computers, edit the `sirv` commands in package.json to include the option `--host 0.0.0.0`.
+### 기본 조작
 
-If you're using [Visual Studio Code](https://code.visualstudio.com/) we recommend installing the official extension [Svelte for VS Code](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode). If you are using other editors you may need to install a plugin in order to get syntax highlighting and intellisense.
+1. **익스텐션 열기**
+   - Chrome 도구 모음의 익스텐션 아이콘 클릭
+   - 또는 임의의 웹페이지에서 플로팅 메모 모달 사용
 
-## Building and running in production mode
+2. **메모 작성**
+   - 텍스트 영역에 직접 입력
+   - 포맷팅을 위한 마크다운 문법 사용
+   - 입력 중단 1초 후 자동 저장 실행
 
-To create an optimised version of the app:
+3. **마크다운 기능**
+   - 헤더: `# H1`, `## H2`, `### H3`
+   - **굵게**: `**굵은 텍스트**`
+   - *기울임*: `*기울임 텍스트*`
+   - 목록: `- 항목` 또는 `1. 번호 매겨진 항목`
+   - 코드: `` `코드` `` 또는 ``` 블록용
+   - 링크: `[텍스트](URL)`
+   - 인용: `> 인용 텍스트`
 
-```bash
-npm run build
-```
+4. **모달 조작**
+   - **드래그**: 모달을 클릭하고 드래그하여 이동
+   - **리사이즈**: 리사이즈 핸들 사용 (아래, 오른쪽, 대각선)
+   - **프리뷰**: 편집 모드와 프리뷰 모드 간 토글
+   - **위치**: 팝업에서 4개 모서리 위치 중 선택
+   - **복사**: 클립보드 아이콘을 클릭하여 메모 내용 복사
 
-You can run the newly built app with `npm run start`. This uses [sirv](https://github.com/lukeed/sirv), which is included in your package.json's `dependencies` so that the app will work when you deploy to platforms like [Heroku](https://heroku.com).
+### 고급 기능
 
+- **위치 기억**: 모달이 마지막 위치와 크기를 기억
+- **가장자리 스냅**: 드래그된 모달이 자동으로 화면 가장자리에 스냅
+- **메모 히스토리**: 팝업에서 날짜별로 모든 이전 메모 조회
+- **마크다운 도움말**: 문법 참조를 위해 💡 아이콘 클릭
 
-## Single-page app mode
+## 🛠️ 개발
 
-By default, sirv will only respond to requests that match files in `public`. This is to maximise compatibility with static fileservers, allowing you to deploy your app anywhere.
+### 사용 가능한 스크립트
 
-If you're building a single-page app (SPA) with multiple routes, sirv needs to be able to respond to requests for *any* path. You can make it so by editing the `"start"` command in package.json:
+- `npm run dev` - 라이브 리로드가 포함된 개발 서버 시작
+- `npm run build` - 프로덕션용 빌드
+- `npm start` - 빌드된 파일을 로컬에서 서빙
 
-```js
-"start": "sirv public --single"
-```
+### 코드 스타일
+- 유틸리티 기반 조직을 가진 모듈식 아키텍처
+- 포괄적인 JSDoc 문서화
+- 일관된 명명 규칙
+- 적절한 오류 처리 및 엣지 케이스
 
-## Using TypeScript
+### 기능 추가
+1. 적절한 `/utils` 파일에 유틸리티 함수 생성
+2. Svelte 컴포넌트에서 import하여 사용
+3. 문서화 및 테스트 업데이트
+4. 일관성을 위해 기존 패턴 준수
 
-This template comes with a script to set up a TypeScript development environment, you can run it immediately after cloning the template with:
+## 🔒 개인정보 보호 및 보안
 
-```bash
-node scripts/setupTypeScript.js
-```
+- **로컬 스토리지만 사용**: 모든 데이터가 Chrome 스토리지에 로컬로 저장
+- **외부 서버 없음**: 외부 서비스로 데이터 전송 없음
+- **콘텐츠 보안**: 안전한 HTML 렌더링을 위해 DOMPurify 사용
+- **최소 권한**: 필요한 Chrome 권한만 요청
 
-Or remove the script via:
+## 🤝 기여하기
 
-```bash
-rm scripts/setupTypeScript.js
-```
+1. 저장소를 포크하세요
+2. 기능 브랜치를 생성하세요 (`git checkout -b feature/amazing-feature`)
+3. 변경사항을 커밋하세요 (`git commit -m 'Add amazing feature'`)
+4. 브랜치에 푸시하세요 (`git push origin feature/amazing-feature`)
+5. Pull Request를 열어주세요
 
-If you want to use `baseUrl` or `path` aliases within your `tsconfig`, you need to set up `@rollup/plugin-alias` to tell Rollup to resolve the aliases. For more info, see [this StackOverflow question](https://stackoverflow.com/questions/63427935/setup-tsconfig-path-in-svelte).
+## 📄 라이선스
 
-## Deploying to the web
+이 프로젝트는 MIT 라이선스에 따라 라이선스가 부여됩니다 - 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
 
-### With [Vercel](https://vercel.com)
+## 🙏 감사의 글
 
-Install `vercel` if you haven't already:
+- 훌륭한 프레임워크를 제공한 Svelte 팀
+- 포괄적인 API를 제공한 Chrome Extensions 팀
+- 마크다운 처리를 위한 Marked.js
+- 보안 중심의 HTML 새니타이제이션을 위한 DOMPurify
 
-```bash
-npm install -g vercel
-```
+## 📞 지원
 
-Then, from within your project folder:
+문제가 발생하거나 기능 요청이 있으시면, GitHub에서 [이슈를 열어주세요](https://github.com/your-username/today-memo-extension/issues).
 
-```bash
-cd public
-vercel deploy --name my-project
-```
+---
 
-### With [surge](https://surge.sh/)
-
-Install `surge` if you haven't already:
-
-```bash
-npm install -g surge
-```
-
-Then, from within your project folder:
-
-```bash
-npm run build
-surge public my-project.surge.sh
-```
+**즐거운 노트 작성 되세요! 📝✨** 
