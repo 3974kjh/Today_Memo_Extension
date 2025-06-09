@@ -42,6 +42,7 @@
   let isPreviewMode = false;
   let isShowMarkdownHelp = false;
   let toggleDebounceTimer;
+  let dragEndTimer; // 드래그 종료 후 호버 감지를 위한 타이머
 
   // Size related variables
   let textareaWidth = '300px';
@@ -271,6 +272,38 @@
     );
   }
 
+  // 드래그 종료 후 호버 상태 재확인을 위한 reactive statement
+  $: if (!isDragging && dragEndTimer) {
+    clearTimeout(dragEndTimer);
+    dragEndTimer = setTimeout(() => {
+      // 드래그가 끝난 후 마우스 위치를 확인하여 호버 상태 업데이트
+      const modalElement = document.getElementById('chrome-memo-extension');
+      if (modalElement) {
+        const rect = modalElement.getBoundingClientRect();
+        const isMouseOver = (
+          window.mouseX >= rect.left && 
+          window.mouseX <= rect.right && 
+          window.mouseY >= rect.top && 
+          window.mouseY <= rect.bottom
+        );
+        if (isMouseOver) {
+          isShowCloseButton = true;
+        }
+      }
+    }, 100); // 드래그 완료 후 100ms 후에 체크
+  }
+
+  // 드래그 시작 시 타이머 설정
+  $: if (isDragging) {
+    dragEndTimer = setTimeout(() => {}, 0); // 플래그 설정용 더미 타이머
+  }
+
+  // 전역 마우스 위치 추적 (드래그 후 호버 감지용)
+  const trackMousePosition = (event) => {
+    window.mouseX = event.clientX;
+    window.mouseY = event.clientY;
+  };
+
   onMount(async () => {
     await tick();
 
@@ -381,6 +414,11 @@
     todayMemoInput = await getTodayMemo();
     // 팝업 열릴 때 전체 메모 불러오기
     totalMemoInfo = await getTotalMemo();
+
+    // 전역 마우스 위치 추적 시작
+    if (typeof window !== 'undefined') {
+      window.addEventListener('mousemove', trackMousePosition);
+    }
   })
 
   onDestroy(() => {
@@ -396,6 +434,14 @@
     }
     if (debounceState.timer) {
       clearTimeout(debounceState.timer);
+    }
+    if (dragEndTimer) {
+      clearTimeout(dragEndTimer);
+    }
+    
+    // 전역 마우스 이벤트 리스너 정리
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('mousemove', trackMousePosition);
     }
   })
 
@@ -519,25 +565,26 @@
     style="
       display: flex;
       flex-direction: row;
-      width: 100%;
+      width: {isOpenPanelFlag ? '100%' : '165px'};
       min-width: 165px;
       height: 30px;
       align-items: center;
-      justify-content: center;
+      justify-content: {isOpenPanelFlag ? 'center' : 'center'};
       position: relative;
     "
   >
-    <div style="display: flex; align-items: center; gap: 8px;">
-    <p
-      style="
-        font-weight: bold;
-        font-size: 20px;
-        line-height: 30px;
-        cursor: pointer;
-          white-space: nowrap;
-        "
-      >{`Today's Memo`}</p>
-      {#if isOpenPanelFlag}
+    {#if isOpenPanelFlag}
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <p
+          style="
+            font-weight: bold;
+            font-size: 20px;
+            line-height: 30px;
+            cursor: pointer;
+            white-space: nowrap;
+            margin: 0;
+            "
+          >{`Today's Memo`}</p>
         <button
           style="
             width: 24px;
@@ -559,17 +606,15 @@
           on:mouseup|capture|stopPropagation|preventDefault={(e) => e.stopImmediatePropagation()}
           title="마크다운 사용법"
         >💡</button>
-      {/if}
-    </div>
-    <div
-        style="
-          display: flex;
-          flex-grow: 1;
-          justify-content: flex-end;
-          align-items: center;
-        "
-      >
-      {#if isOpenPanelFlag}
+      </div>
+      <div
+          style="
+            display: flex;
+            flex-grow: 1;
+            justify-content: flex-end;
+            align-items: center;
+          "
+        >
         <button
           style="
             width: 24px;
@@ -589,8 +634,20 @@
           on:click|capture|stopPropagation={() => handleCopyMemo(todayMemoInput)}
           title="메모 복사"
         >{'📋'}</button>
-      {/if}
-    </div>
+      </div>
+    {:else}
+      <p
+        style="
+          font-weight: bold;
+          font-size: 20px;
+          line-height: 1;
+          cursor: pointer;
+          white-space: nowrap;
+          margin: 0;
+          text-align: center;
+          "
+        >{`Today's Memo`}</p>
+    {/if}
   </div>
   {#if isOpenPanelFlag}
     {#if isShowMarkdownHelp}
@@ -711,22 +768,22 @@
       {:else}
         <div class="resizable-container">
     <textarea
-            bind:this={textareaElement}
-      id="alive-memo-textarea"
-      autofocus={true}
-      style="
-              background: #fffae3 !important;
-        border: 1px solid #d1d5db;
-        border-radius: 5px;
-              padding: 8px;
-              padding-right: 48px;
-        font-size: 16px;
-              resize: none;
-        min-width: 200px;
-              max-width: {maxTextareaWidth}px;
-              min-height: 150px;
-              max-height: {maxTextareaHeight}px;
-              box-sizing: border-box;
+        bind:this={textareaElement}
+        id="alive-memo-textarea"
+        autofocus={true}
+        style="
+          background: #fffae3 !important;
+          border: 1px solid #d1d5db;
+          border-radius: 5px;
+          padding: 8px;
+          padding-right: 48px;
+          font-size: 16px;
+          resize: none;
+          min-width: 200px;
+          max-width: {maxTextareaWidth}px;
+          min-height: 150px;
+          max-height: {maxTextareaHeight}px;
+          box-sizing: border-box;
       " 
       bind:value={todayMemoInput}
       on:click|capture|stopPropagation
@@ -842,7 +899,7 @@
       style="
         position: absolute;
         top: -12px;
-        right: {isLeftPosition ? 0 : 135}px;
+        right: {isLeftPosition ? 0 : 155}px;
         background: #000000;
         border: 1px solid #FFFFFF;
         border-radius: 9999px;
