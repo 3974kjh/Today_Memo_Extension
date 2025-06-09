@@ -136,7 +136,7 @@
 <div class="flex flex-col w-[300px] p-2 rounded-md relative border border-dashed border-black bg-white">
   <div class="flex flex-col p-2 space-y-1 border rounded-md border-gray-200 {Object.keys(totalMemoInfo).length > 0 || isShowMarkdownHelp ? 'mb-2' : ''}">
     <div class="flex h-[50px] justify-center items-center text-xl font-bold border-b relative">
-      <span>{`TODAY MEMO`}</span>
+      <span>{`TODAY'S MEMO`}</span>
       <button 
         class="absolute right-2 w-7 h-7 bg-white border border-gray-300 rounded-full hover:bg-gray-100 flex items-center justify-center text-xs font-bold shadow-sm"
         on:click={toggleMarkdownHelp}
@@ -190,11 +190,11 @@
     </div>
     <div class="flex flex-row w-full justify-center items-center space-x-1">
       <button class="w-full h-[30px] bg-sky-200 hover:bg-sky-400 border rounded-md border-gray-50 font-bold" on:click={save}>{'SAVE'}</button>
-      <div class="flex flex-row h-[30px] w-full p-0.5 bg-gray-200 border border-gray-50 space-x-0.5 rounded-md">
-        <button class="w-full bg-white hover:bg-gray-400 border rounded-md border-gray-100 font-bold" on:click={() => openBrowserMemoModal('TL')}>{'↖'}</button>
-        <button class="w-full bg-white hover:bg-gray-400 border rounded-md border-gray-100 font-bold" on:click={() => openBrowserMemoModal('TR')}>{'↗'}</button>
-        <button class="w-full bg-white hover:bg-gray-400 border rounded-md border-gray-100 font-bold" on:click={() => openBrowserMemoModal('BL')}>{'↙'}</button>
-        <button class="w-full bg-white hover:bg-gray-400 border rounded-md border-gray-100 font-bold" on:click={() => openBrowserMemoModal('BR')}>{'↘'}</button>
+      <div class="flex flex-row h-[30px] w-full p-0.5 bg-sky-50 border border-gray-200 space-x-0.5 rounded-md">
+        <button class="w-full bg-sky-200 hover:bg-sky-400 border rounded-md border-gray-100 font-bold" on:click={() => openBrowserMemoModal('TL')}>{'↖'}</button>
+        <button class="w-full bg-sky-200 hover:bg-sky-400 border rounded-md border-gray-100 font-bold" on:click={() => openBrowserMemoModal('TR')}>{'↗'}</button>
+        <button class="w-full bg-sky-200 hover:bg-sky-400 border rounded-md border-gray-100 font-bold" on:click={() => openBrowserMemoModal('BL')}>{'↙'}</button>
+        <button class="w-full bg-sky-200 hover:bg-sky-400 border rounded-md border-gray-100 font-bold" on:click={() => openBrowserMemoModal('BR')}>{'↘'}</button>
       </div>
     </div>
   </div>
@@ -203,10 +203,16 @@
       <div class="flex flex-col w-full space-y-2 p-2">
         {#each sortByList(Object.keys(totalMemoInfo)) as memoInfo}
           <div class="flex flex-col w-full space-y-1 border rounded-md border-gray-50">
-            <div class="flex flex-row w-full h-auto px-2 border-b border-gray-50 bg-sky-50">
+            <div class="flex flex-row w-full h-auto p-1 border-b border-gray-50 bg-sky-50">
               <p class="font-bold text-lg">{memoInfo}</p>
               <div class="flex grow justify-end items-center">
-                <button class="cursor-pointer" on:click={() => copyMemoText(totalMemoInfo[memoInfo].memo)}>{'📋'}</button>
+                <button 
+                  class="w-7 h-7 bg-white border border-gray-300 rounded-full hover:bg-gray-100 flex items-center justify-center text-xs font-bold shadow-sm"
+                  on:click={() => copyMemoText(totalMemoInfo[memoInfo].memo)}
+                  title="메모 복사"
+                >
+                  📋
+                </button>
               </div>
             </div>
             <div class="p-2 w-full min-h-[100px] overflow-y-auto overflow-x-hidden scrollbar-thin-custom text-wrap break-words prose prose-sm max-w-none">
